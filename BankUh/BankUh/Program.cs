@@ -1,66 +1,144 @@
-﻿using BankUh;
+﻿using System;
+using BankSystem.Services;
 
-class Program
+namespace BankSystem
 {
-    static void Main(string[] args)
+    class Program
     {
-        var bankLogin = new BankLogin();
-        var db = AccountSystem.Instance;
-        string? currentUsername = null;
-
-        while (true)
+        static void Main(string[] args)
         {
-            Console.Clear();
-            Console.WriteLine("====== ☺ BANK PIPIS-SPAM.NET ======");
-            if (currentUsername == null)
+            var bankService = new BankService();
+            string? currentUsername = null;
+
+            while (true)
             {
-                Console.WriteLine("\n У вас есть аккаунт на PIPIS-SPAM.NET??\n Если у вас НЕТ аккаунта ЗАРЕГЕСРИРУЙТЕСЬ!!! если аккаунт есть... ну. войдите?\n\n 1. Зарегестрироватся \n 2. Я уже смешарик(войти)");
-                var choice = Console.ReadLine();
-                switch (choice)
+                Console.Clear();
+                Console.WriteLine("=== Banking System ===");
+
+                if (currentUsername == null)
                 {
-                    case "1":
-                        bankLogin.RegisterUser(db);
-                        break;
-                    case "2":
-                        currentUsername = bankLogin.LoginUser(db);
-                        break;
-                    case "0":
-                        return;
-                    default:
-                        Console.WriteLine("НЕТ!");
-                        Thread.Sleep(500);
-                        break;
+                    Console.WriteLine("1. Register\n2. Login\n0. Exit");
+                    Console.Write("Choice: ");
+                    var choice = Console.ReadLine();
+
+                    switch (choice)
+                    {
+                        case "1":
+                            HandleRegister(bankService);
+                            break;
+                        case "2":
+                            currentUsername = HandleLogin(bankService);
+                            break;
+                        case "0":
+                            return;
+                    }
                 }
+                else
+                {
+                    DisplayUserInfo(bankService, currentUsername);
+                    Console.WriteLine("1. Transfer\n2. Deposit\n3. Withdraw\n4. Logout");
+                    Console.Write("Choice: ");
+                    var choice = Console.ReadLine();
+
+                    switch (choice)
+                    {
+                        case "1":
+                            HandleTransfer(bankService, currentUsername);
+                            break;
+                        case "2":
+                            HandleDeposit(bankService, currentUsername);
+                            break;
+                        case "3":
+                            HandleWithdraw(bankService, currentUsername);
+                            break;
+                        case "4":
+                            currentUsername = null;
+                            break;
+                    }
+                }
+
+                Console.WriteLine("\nPress any key to continue...");
+                Console.ReadKey();
+            }
+        }
+
+        static void HandleRegister(BankService service)
+        {
+            Console.Write("Username: ");
+            string user = Console.ReadLine();
+            Console.Write("Password: ");
+            string pass = Console.ReadLine();
+
+            var result = service.Register(user, pass);
+            Console.WriteLine(result.Message);
+        }
+
+        static string? HandleLogin(BankService service)
+        {
+            Console.Write("Username: ");
+            string user = Console.ReadLine();
+            Console.Write("Password: ");
+            string pass = Console.ReadLine();
+
+            var result = service.Login(user, pass);
+            Console.WriteLine(result.Message);
+
+            if (result.IsSuccess && result.Data != null)
+            {
+                return result.Data.Username;
+            }
+            return null;
+        }
+
+        static void DisplayUserInfo(BankService service, string username)
+        {
+            string id = service.GetId(username);
+            decimal balance = service.GetBalance(username);
+            Console.WriteLine($"\nUser: {username} | ID: {id} | Balance: {balance}");
+        }
+
+        static void HandleTransfer(BankService service, string username)
+        {
+            Console.Write("Recipient ID: ");
+            string targetId = Console.ReadLine();
+            Console.Write("Amount: ");
+
+            if (decimal.TryParse(Console.ReadLine(), out decimal amount))
+            {
+                var result = service.Transfer(username, targetId, amount);
+                Console.WriteLine(result.Message);
             }
             else
             {
-                var me = db.Login(currentUsername, "");
-                var myAccount = db.Accounts.First(a => a.Username == currentUsername);
+                Console.WriteLine("Invalid amount.");
+            }
+        }
 
-                Console.WriteLine($"\n\nВы вошли как: {currentUsername}\nВаш ID счета: {myAccount.Id}\nБаланс: {myAccount.Balance} кромеров\n\n1. Перевести деньги\n2. Пополнить счет\n3. Вывести кромеры\n4. Выйти\n");
-                var choice = Console.ReadLine();
+        static void HandleDeposit(BankService service, string username)
+        {
+            Console.Write("Amount: ");
+            if (decimal.TryParse(Console.ReadLine(), out decimal amount))
+            {
+                var result = service.Deposit(username, amount);
+                Console.WriteLine(result.Message);
+            }
+            else
+            {
+                Console.WriteLine("Invalid amount.");
+            }
+        }
 
-                switch (choice)
-                {
-                    case "1":
-                        bankLogin.MakeTransfer(db, currentUsername);
-                        break;
-                    case "2":
-                        bankLogin.MakeAddKromer(db, currentUsername);
-                        break;
-                    case "3":
-                        bankLogin.MakeNoKromer(db, currentUsername);
-                        break;
-                    case "4":
-                        currentUsername = null;
-                        break;
-                    case "0":
-                        return;
-                    default:
-                        Console.WriteLine("НЕТ!");
-                        Thread.Sleep(500);
-                        break;
-                }
+        static void HandleWithdraw(BankService service, string username)
+        {
+            Console.Write("Amount: ");
+            if (decimal.TryParse(Console.ReadLine(), out decimal amount))
+            {
+                var result = service.Withdraw(username, amount);
+                Console.WriteLine(result.Message);
+            }
+            else
+            {
+                Console.WriteLine("Invalid amount.");
             }
         }
     }
